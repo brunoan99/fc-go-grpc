@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -24,6 +25,7 @@ func main() {
 	AddUser(client)
 	fmt.Println("main, requesition execution time", time.Since(afterConnect))
 	fmt.Println("main, total execution time", time.Since(start))
+	AddUserVerbose(client)
 }
 
 func AddUser(client pb.UserServiceClient) {
@@ -37,4 +39,28 @@ func AddUser(client pb.UserServiceClient) {
 		log.Fatalf("could not make gRPC request: %v", err)
 	}
 	fmt.Println(res)
+}
+
+func AddUserVerbose(client pb.UserServiceClient) {
+	req := &pb.User{
+		Id:    "0",
+		Name:  "Joao",
+		Email: "joazin@example.com",
+	}
+	resStream, err := client.AddUserVerbose(context.Background(), req)
+	if err != nil {
+		log.Fatalf("could not make gRPC request: %v", err)
+	}
+	for {
+		stream, err := resStream.Recv()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatalf("could not recive response: %v", err)
+		}
+		fmt.Println("Status:", stream.Status)
+		fmt.Println("User:", stream.User)
+	}
+
 }
