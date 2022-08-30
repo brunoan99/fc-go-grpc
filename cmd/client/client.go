@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/brunoan99/go-grpc/pb"
 	"google.golang.org/grpc"
@@ -11,14 +12,18 @@ import (
 )
 
 func main() {
+	start := time.Now()
 	connection, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Could not connect to gRPC Server: %v", err)
 	}
 	defer connection.Close()
 
+	afterConnect := time.Now()
 	client := pb.NewUserServiceClient(connection)
 	AddUser(client)
+	fmt.Println("main, requesition execution time", time.Since(afterConnect))
+	fmt.Println("main, total execution time", time.Since(start))
 }
 
 func AddUser(client pb.UserServiceClient) {
