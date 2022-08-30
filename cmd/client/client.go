@@ -13,20 +13,17 @@ import (
 )
 
 func main() {
-	start := time.Now()
 	connection, err := grpc.Dial("localhost:50051", grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Could not connect to gRPC Server: %v", err)
 	}
 	defer connection.Close()
 
-	afterConnect := time.Now()
 	client := pb.NewUserServiceClient(connection)
-	AddUser(client)
-	fmt.Println("main, requesition execution time", time.Since(afterConnect))
-	fmt.Println("main, total execution time", time.Since(start))
-	AddUserVerbose(client)
-	AddUsers(client)
+	//	AddUser(client)
+	//  AddUserVerbose(client)
+	//	AddUsers(client)
+	AddUserStreamBoth(client)
 }
 
 func AddUser(client pb.UserServiceClient) {
@@ -112,4 +109,71 @@ func AddUsers(client pb.UserServiceClient) {
 		log.Fatalf("Error receiving response: %v", err)
 	}
 	fmt.Println("Recived response: ", res)
+}
+
+func AddUserStreamBoth(client pb.UserServiceClient) {
+	stream, err := client.AddUserStreamBoth(context.Background())
+	if err != nil {
+		log.Fatalf("Error creating request: %v", err)
+	}
+	reqs := []*pb.User{
+		{
+			Id:    "0",
+			Name:  "Bruno",
+			Email: "brunoan99@gmail.com",
+		},
+		{
+			Id:    "1",
+			Name:  "Bruno",
+			Email: "brunoan99@gmail.com",
+		},
+		{
+			Id:    "2",
+			Name:  "Bruno",
+			Email: "brunoan99@gmail.com",
+		},
+		{
+			Id:    "3",
+			Name:  "Bruno",
+			Email: "brunoan99@gmail.com",
+		},
+		{
+			Id:    "4",
+			Name:  "Bruno",
+			Email: "brunoan99@gmail.com",
+		},
+		{
+			Id:    "5",
+			Name:  "Bruno",
+			Email: "brunoan99@gmail.com",
+		},
+	}
+
+	wait := make(chan int)
+
+	go func() {
+		for _, user := range reqs {
+			fmt.Println("Sending User: ", user.Name)
+			stream.Send(user)
+			time.Sleep(time.Second * 3)
+		}
+		stream.CloseSend()
+	}()
+
+	go func() {
+		for {
+			res, err := stream.Recv()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				log.Fatalf("error receiving response: %v", err)
+				break
+			}
+			fmt.Printf("Received User: %v with status: %v \n", res.GetUser().GetName(), res.GetStatus())
+		}
+		close(wait)
+	}()
+
+	<-wait
 }
